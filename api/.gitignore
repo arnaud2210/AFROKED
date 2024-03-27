@@ -1,0 +1,4 @@
+envapi/
+models/__pycache__/
+routes/__pycache__/
+utils/__pycache__/

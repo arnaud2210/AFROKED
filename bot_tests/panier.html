@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panier</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .product-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .product-image {
+            width: 100px;
+            margin-right: 20px;
+        }
+        .product-details {
+            flex-grow: 1;
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 2px;
+            cursor: pointer;
+        }
+        .button-red {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h2>Votre Panier</h2>
+    {% for product, quantity in cart.items() %}
+    <div class="product-container">
+        <img src="{{ products[product]['photo'] }}" alt="{{ product }}" class="product-image">
+        <div class="product-details">
+            <h3>{{ product }}</h3>
+            <p>{{ products[product]['details'] }}</p>
+            <p>Prix: {{ products[product]['prix'] }}</p>
+            <form action="/update_cart/{{ user_id }}" method="post">
+                <button type="submit" class="button" name="action" value="add_{{ product }}">+</button>
+                <button type="submit" class="button button-red" name="action" value="remove_{{ product }}">-</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    <form action="/open_cart_in_bot/{{ user_id }}" method="post">
+        <button type="submit" class="button">Ouvrir le panier dans le bot</button>
+    </form>
+</body>
+</html>
