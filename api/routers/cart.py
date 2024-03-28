@@ -66,6 +66,8 @@ async def get_shopping_cart(user: BotUserModel = Depends(get_current_bot_user), 
     products: AsyncIOMotorCollection = db["products"]
 
     cart_data = await collection.find_one({"user_id": user.user_id})
+    if cart_data is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panier non trouvé")
 
     orders = cart_data["orders"]
     

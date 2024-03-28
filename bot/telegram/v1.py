@@ -1,6 +1,9 @@
 import requests
 
+#LOCAL_BASE_URL="https://afroked.onrender.com/api"
+
 LOCAL_BASE_URL="http://localhost:8000/api"
+
 
 # Save or login with bot user to get token
 

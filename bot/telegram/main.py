@@ -34,6 +34,7 @@ def welcome_message(message):
     bot.send_message(user_id, message_for_welcome)
     # get all categories
     _, categories = get_all_categories()
+    print(categories)
     # return all categories in button
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     for category in categories:
@@ -116,22 +117,27 @@ def cart_handler(message):
 
     _, receipt = get_shopping_cart(message.chat.id)
 
-    for detail in receipt["data"]:
-        if detail:
-            item_data = f"{detail['product_name']} - Quantité: {detail['quantity']} - Prix unitaire: {detail['unit_price']} - Prix total: {detail['total_unit']} FCFA"
-            all_items.append(item_data)
-        else:
-            item_data = f"{detail['product_name']} (Produit non trouvé) - Quantité: {detail['quantity']}"
-            all_items.append(item_data)
+    if 'data' not in receipt:
+        message_text = receipt["detail"]
+        bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
 
-    if all_items:
-        cart_contents = "\n\n".join(all_items)
-        message_text = f"**Votre panier:**\n\n{cart_contents}\n\n**Total:** {receipt['total_price']} FCFA"
     else:
-        message_text = "Votre panier est vide."
-    
-    print(f"{message.chat.id}: Get cart and receipt")
-    bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
+        for detail in receipt["data"]:
+            if detail:
+                item_data = f"{detail['product_name']} - Quantité: {detail['quantity']} - Prix unitaire: {detail['unit_price']} - Prix total: {detail['total_unit']} FCFA"
+                all_items.append(item_data)
+            else:
+                item_data = f"{detail['detail']}"
+                all_items.append(item_data)
+
+        if all_items:
+            cart_contents = "\n\n".join(all_items)
+            message_text = f"**Votre panier:**\n\n{cart_contents}\n\n**Total:** {receipt['total_price']} FCFA"
+        else:
+            message_text = "Votre panier est vide."
+        
+        print(f"{message.chat.id}: Get cart and receipt")
+        bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
 
 @bot.message_handler(commands=['catalog'])
 def view_catalog(message):
@@ -141,7 +147,7 @@ def view_catalog(message):
     keyboard.add(types.InlineKeyboardButton(text=button_text, url=mini_app_url))
 
     print(f"{message.chat.id}: View all product")
-    # Envoyer un message avec le bouton Inline Keyboard
+    
     bot.send_message(message.chat.id, "Consulter tous les catalogues en cliquant sur le bouton suivant:", reply_markup=keyboard)
 
 
