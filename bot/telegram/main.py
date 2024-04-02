@@ -1,6 +1,6 @@
 from telebot import types
 from v1 import (get_all_categories, get_all_products_by_category, get_product_details, 
-                add_to_cart, get_shopping_cart, validate_shopping_cart)
+                add_to_cart, get_shopping_cart, validate_shopping_cart, create_advertise)
 import telebot
 
 TOKEN = "7003324615:AAGSf1JmzWi6nOUYBAm9zvYZlF0HwgxLrE4"
@@ -21,6 +21,7 @@ message_for_welcome = """
     🚀 Voici quelques commandes que vous pouvez utiliser pour commencer :
 
     ➡️ /start - Commencez votre achat
+    ➡️ /advertise - Faire une demande
     ➡️ /catalog - Voir le catalogue de produits
     ➡️ /mycart - Voir ce que vous avez dans votre panier
     ➡️ /myreceipt - Voir votre facture
@@ -43,7 +44,7 @@ def welcome_message(message):
     for category in categories:
         keyboard.add(types.KeyboardButton(category["name"]))
     print(f"{user_id}: start conversation")
-    bot.send_message(message.chat.id, "Choisissez une catégorie:", reply_markup=keyboard)
+    bot.send_message(message.chat.id, "🛠️ Choisissez une catégorie:", reply_markup=keyboard)
 
 
 _, categories = get_all_categories()
@@ -59,7 +60,7 @@ def category_handler(message):
         product_button = types.InlineKeyboardButton(text=product["name"], callback_data=f"product_{product['id']}_{category_id}")  # Passer l'ID de la catégorie
         products_keyboard.add(product_button)
     print(f"{message.chat.id}: choose categorie {category_name}")
-    bot.send_message(message.chat.id, "Choisissez un produit:", reply_markup=products_keyboard)
+    bot.send_message(message.chat.id, "🛍️ Choisissez un produit:", reply_markup=products_keyboard)
 
 
 # Afficher le produit
@@ -146,6 +147,7 @@ def cart_handler(message):
         print(f"{message.chat.id}: Get cart {[receipt['cart_id']]}")
         bot.send_message(message.chat.id, message_text, parse_mode="Markdown", reply_markup=keyboard)
 
+# Valider le contenu du panier
 @bot.callback_query_handler(func=lambda call: call.data.startswith("validate_cart_"))
 def validate_cart(call):
     data_parts = call.data.split("_")
@@ -159,6 +161,7 @@ def validate_cart(call):
     else:
         bot.send_message(call.message.chat.id, "Une erreur s'est produite, veuillez reconsulter votre panier.")
 
+# Accédez à l'interface web
 @bot.message_handler(commands=['catalog'])
 def view_catalog(message):
     button_text = "Ouvrir"
@@ -169,6 +172,26 @@ def view_catalog(message):
     print(f"{message.chat.id}: View all product")
     
     bot.send_message(message.chat.id, "Consulter tous les catalogues en cliquant sur le bouton suivant:", reply_markup=keyboard)
+
+@bot.message_handler(commands=["advertise"])
+def annonce_handler(message):
+    print(f"{message.chat.id}: Make annoncement")
+    bot.send_message(message.chat.id, "📤 Veuillez rédiger votre demande:")
+
+
+@bot.message_handler(func=lambda message: True)
+def store_annonce(message):
+    # Vérifier si le message provient de la commande /annonce
+    if message.text.startswith("/advertise"):
+        return
+    
+    status, _ = create_advertise(message.text, message.chat.id)
+
+    if status == 200:
+        print(f"{message.chat.id}: send user annoncement")
+        bot.send_message(message.chat.id, "✅ Votre demande a été enregistrée avec succès.")
+    else:
+        bot.send_message(message.chat.id, "Une erreur s'est produite. Veuillez réessayez")
 
 
 # Démarrer le bot

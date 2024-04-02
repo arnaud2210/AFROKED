@@ -8,6 +8,6 @@ class BotUserModel(BaseModel):
 
 class BotUserData(BaseModel):
     id: str
-    user_id: str
+    user_id: int
     plateform: str
     joined_at: Optional[datetime]
