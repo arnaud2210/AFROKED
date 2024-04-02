@@ -137,6 +137,7 @@ async def get_all_products_by_category(
             category_id=product["category_id"],
             created_by=product["created_by"],
             visibility=product["visibility"],
+            currency=product["currency"],
             created_at=product["created_at"],
             updated_at=product["updated_at"]
         )
