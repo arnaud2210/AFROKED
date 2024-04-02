@@ -59,3 +59,12 @@ def get_shopping_cart(user_id:int):
     # return details of product
     return response.status_code, response.json()
 
+def validate_shopping_cart(cart_id, user_id:int):
+    # get token from login
+    _ , token = login(user_id)
+    # login with token in headers
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = requests.put(f"{LOCAL_BASE_URL}/cart/validate/{cart_id}", headers=headers)
+    # return details of product
+    return response.status_code, response.json()

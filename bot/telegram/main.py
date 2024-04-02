@@ -1,5 +1,6 @@
 from telebot import types
-from v1 import get_all_categories, get_all_products_by_category, get_product_details, add_to_cart, get_shopping_cart
+from v1 import (get_all_categories, get_all_products_by_category, get_product_details, 
+                add_to_cart, get_shopping_cart, validate_shopping_cart)
 import telebot
 
 TOKEN = "7003324615:AAGSf1JmzWi6nOUYBAm9zvYZlF0HwgxLrE4"
@@ -27,6 +28,9 @@ message_for_welcome = """
     💌 Prêt à commencer votre aventure de shopping ? Cliquez sur les boutons ci-dessus et laissez-vous emporter ! 💌
     """
 
+print("Bot server loading...")
+print("Bot is ready !")
+
 # Message de bienvenue
 @bot.message_handler(commands=['start'])
 def welcome_message(message):
@@ -34,12 +38,11 @@ def welcome_message(message):
     bot.send_message(user_id, message_for_welcome)
     # get all categories
     _, categories = get_all_categories()
-    print(categories)
     # return all categories in button
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     for category in categories:
         keyboard.add(types.KeyboardButton(category["name"]))
-    print(f"{message.chat.id}: start conversation")
+    print(f"{user_id}: start conversation")
     bot.send_message(message.chat.id, "Choisissez une catégorie:", reply_markup=keyboard)
 
 
@@ -72,13 +75,13 @@ def product_handler(call):
     # Afficher les détails du produit
     #message_text = f"[Image]({product['image']})\n"
     message_text = f"{product['name']} ({product['stock']})\n\n"
-    message_text += f"Prix: {product['price']} FCFA\n\n"
+    message_text += f"Prix: {product['price']} {product['currency']}\n\n"
     message_text += f"{product['description']}\n\n"
     
     # Ajouter des boutons
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    keyboard.add(types.InlineKeyboardButton("Ajouter au panier", callback_data=f"add_to_cart_{product_id}"))
-    keyboard.add(types.InlineKeyboardButton("Liker", callback_data=f"like_product_{product_id}"))
+    keyboard.add(types.InlineKeyboardButton("🛒 Ajouter au panier", callback_data=f"add_to_cart_{product_id}"))
+    #keyboard.add(types.InlineKeyboardButton("Liker", callback_data=f"like_product_{product_id}"))
     # Envoyer la photo du produit
     print(f"{call.message.chat.id}: Get product {[product['name']]} detail")
     bot.send_photo(call.message.chat.id, product["image"], caption=message_text, reply_markup=keyboard)
@@ -118,7 +121,8 @@ def cart_handler(message):
     _, receipt = get_shopping_cart(message.chat.id)
 
     if 'data' not in receipt:
-        message_text = receipt["detail"]
+        message_text = "Votre panier est vide"
+        print(f"{message.chat.id}: {receipt['detail']}")
         bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
 
     else:
@@ -133,11 +137,27 @@ def cart_handler(message):
         if all_items:
             cart_contents = "\n\n".join(all_items)
             message_text = f"**Votre panier:**\n\n{cart_contents}\n\n**Total:** {receipt['total_price']} FCFA"
+
+            keyboard = types.InlineKeyboardMarkup()
+            keyboard.add(types.InlineKeyboardButton(text="✅ Valider mon panier", callback_data=f"validate_cart_{receipt['cart_id']}"))
         else:
-            message_text = "Votre panier est vide."
-        
-        print(f"{message.chat.id}: Get cart and receipt")
-        bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
+            bot.send_message(message.chat.id, "Veuillez réessayer s'il vous plait.")
+
+        print(f"{message.chat.id}: Get cart {[receipt['cart_id']]}")
+        bot.send_message(message.chat.id, message_text, parse_mode="Markdown", reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("validate_cart_"))
+def validate_cart(call):
+    data_parts = call.data.split("_")
+    cart_id = data_parts[2]
+
+    status, _ = validate_shopping_cart(cart_id, call.message.chat.id)
+
+    if status == 200:
+        print(f"{call.message.chat.id}: Validate shopping cart")
+        bot.send_message(call.message.chat.id, "Votre panier a été validé !")
+    else:
+        bot.send_message(call.message.chat.id, "Une erreur s'est produite, veuillez reconsulter votre panier.")
 
 @bot.message_handler(commands=['catalog'])
 def view_catalog(message):
@@ -153,3 +173,5 @@ def view_catalog(message):
 
 # Démarrer le bot
 bot.polling()
+
+print("Server is shutting down ...")
