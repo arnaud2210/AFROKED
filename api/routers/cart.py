@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorCollection
-from models.order import OrderModel, OrderData, OrderDelete
+from models.cart import CartModel, CartData, CartDelete
 from models.botuser import BotUserModel
 from routers.botuser import get_current_bot_user
 from database.mongodb import connect_to_mongo
@@ -14,7 +14,7 @@ from typing import List
 router = APIRouter()
 
 @router.post("/create", response_model=dict, dependencies=[Depends(JWTBearer())])
-async def create_or_update_cart(orders: List[OrderModel], user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
+async def create_or_update_cart(orders: List[CartModel], user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
     collection: AsyncIOMotorCollection = db["shopping_cart"]
 
     # Utiliser un dictionnaire pour stocker les quantités par product_id
@@ -32,7 +32,7 @@ async def create_or_update_cart(orders: List[OrderModel], user: BotUserModel = D
             quantities_by_product_id[product_id] = quantity
 
     # Mettre à jour ou insérer le panier complet dans la base de données
-    existing_cart = await collection.find_one({"user_id": user.user_id})
+    existing_cart = await collection.find_one({"user_id": user.user_id, "visibility": False})
     if existing_cart:
         for order in existing_cart["orders"]:
             # Mettre à jour les quantités des produits existants dans le panier
@@ -46,11 +46,12 @@ async def create_or_update_cart(orders: List[OrderModel], user: BotUserModel = D
             existing_cart["orders"].append({"product_id": product_id, "quantity": quantity})
         
         # Mettre à jour le panier dans la base de données
-        await collection.update_one({"user_id": user.user_id}, {"$set": existing_cart})
+        await collection.update_one({"user_id": user.user_id, "visibility": False}, {"$set": existing_cart})
     else:
         # Construire le panier complet avec les nouvelles commandes
         cart_data = {
             "user_id": user.user_id,
+            "visibility": False,
             "created_at": datetime.now(),
             "orders": [{"product_id": product_id, "quantity": quantity} for product_id, quantity in quantities_by_product_id.items()]
         }
@@ -65,7 +66,7 @@ async def get_shopping_cart(user: BotUserModel = Depends(get_current_bot_user), 
     collection: AsyncIOMotorCollection = db["shopping_cart"]
     products: AsyncIOMotorCollection = db["products"]
 
-    cart_data = await collection.find_one({"user_id": user.user_id})
+    cart_data = await collection.find_one({"user_id": user.user_id, "visibility": False})
     if cart_data is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panier non trouvé")
 
@@ -76,6 +77,7 @@ async def get_shopping_cart(user: BotUserModel = Depends(get_current_bot_user), 
         product_exist = await products.find_one({"_id": ObjectId(order["product_id"])})
 
         receipt_details = {
+            "product_id": str(ObjectId(product_exist["_id"])),
             "product_name": product_exist["name"],
             "product_image": product_exist["image"],
             "product_stock": product_exist["stock"],
@@ -86,15 +88,36 @@ async def get_shopping_cart(user: BotUserModel = Depends(get_current_bot_user), 
 
         receipt.append(receipt_details)
     
+    cart_id = str(ObjectId(cart_data["_id"]))
     total_price = sum([(detail["total_unit"]) for detail in receipt])
     
     if cart_data:
-        return {"data": receipt, "total_price": total_price}
+        return {"cart_id": cart_id, "data": receipt, "total_price": total_price, "total_items": len(receipt)}
     
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panier non trouvé")
 
+@router.put("/validate/{cart_id}", response_model=dict, dependencies=[Depends(JWTBearer())])
+async def validate_shopping_cart(cart_id: str, user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
+    collection: AsyncIOMotorCollection = db["shopping_cart"]
+    orders: AsyncIOMotorCollection = db["orders"]
+
+    cart_data = await collection.find_one({"_id": ObjectId(cart_id),"user_id": user.user_id, "visibility": False})
+    if cart_data is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panier non trouvé")
+    
+    await collection.update_one(
+        {"_id": ObjectId(cart_id), "user_id": user.user_id},
+        {
+            "$set": {"visibility": True}
+        }
+    )
+
+    await orders.insert_one({"cart_id": cart_id, "user_id": user.user_id})
+
+    return {"detail": "Panier validé avec succès"}
+
 @router.put("/{product_id}", response_model=dict, dependencies=[Depends(JWTBearer())])
-async def update_shopping_cart(order: OrderModel, user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
+async def update_shopping_cart(order: CartModel, user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
     collection: AsyncIOMotorCollection = db["shopping_cart"]
     products: AsyncIOMotorCollection = db["products"]
 
@@ -107,7 +130,7 @@ async def update_shopping_cart(order: OrderModel, user: BotUserModel = Depends(g
 
     if checking == True:
         collection.update_one(
-            {"user_id": user.user_id, "orders.product_id": order.product_id},
+            {"user_id": user.user_id, "visibility": False, "orders.product_id": order.product_id},
             {
                 "$set": {"orders.$.quantity": order.quantity}
             }
@@ -122,7 +145,7 @@ async def remove_product_from_shopping_cart(product_id: str, user: BotUserModel 
     collection: AsyncIOMotorCollection = db["shopping_cart"]
     products: AsyncIOMotorCollection = db["products"]
 
-    existing_cart = await collection.find_one({"user_id": user.user_id})
+    existing_cart = await collection.find_one({"user_id": user.user_id, "visibility": False})
     if not existing_cart:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ce panier n'a pas été retrouvé")
     
