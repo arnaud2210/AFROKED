@@ -9,6 +9,7 @@ class ProductModel(BaseModel):
     description: Optional[Text]
     image: str
     category_id: str
+    currency: str
     created_by: str
 
 class ProductData(BaseModel):
@@ -21,6 +22,7 @@ class ProductData(BaseModel):
     category_id: str
     created_by: str
     visibility: bool
+    currency: str
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 

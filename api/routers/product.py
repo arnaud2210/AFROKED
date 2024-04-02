@@ -25,6 +25,7 @@ async def create_product(
     price: float = Form(...),
     stock: int = Form(...),
     category_id: str = Form(...),
+    currency: str = Form(...),
     file: UploadFile = File(...),
     user: User = Depends(get_current_user), 
     db: AsyncIOMotorDatabase = Depends(connect_to_mongo)
@@ -51,6 +52,7 @@ async def create_product(
         "category_id": category_id,
         "created_by": user.email,
         "visibility": False,
+        "currency": currency,
         "created_at": datetime.now(),
         "updated_at": datetime.now() 
     }
@@ -87,6 +89,7 @@ async def edit_product(
     price: float = Form(...),
     stock: int = Form(...),
     category_id: str = Form(...),
+    currency: str = Form(...),
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(connect_to_mongo)
@@ -115,6 +118,7 @@ async def edit_product(
         "description": description,
         "image": upload_file(file_path),
         "category_id": category_id,
+        "currency": currency,
         "updated_at": datetime.now() 
     }
         
@@ -148,6 +152,7 @@ async def get_user_products(user: User = Depends(get_current_user), db: AsyncIOM
             category_id=product["category_id"],
             created_by=user.email,
             visibility=product["visibility"],
+            currency=product["currency"],
             created_at=product["created_at"],
             updated_at=product["updated_at"]
         )
@@ -173,6 +178,7 @@ async def get_all_products(db: AsyncIOMotorDatabase = Depends(connect_to_mongo))
             category_id=product["category_id"],
             created_by=product["created_by"],
             visibility=product["visibility"],
+            currency=product["currency"],
             created_at=product["created_at"],
             updated_at=product["updated_at"]
         )
@@ -199,6 +205,7 @@ async def get_product_details(product_id: str, db: AsyncIOMotorDatabase = Depend
         category_id=product["category_id"],
         created_by=product["created_by"],
         visibility=product["visibility"],
+        currency=product["currency"],
         created_at=product["created_at"],
         updated_at=product["updated_at"]
     )
