@@ -50,6 +50,7 @@ class User(BaseModel):
     disabled: Optional[bool] = False
     username: str
     email: str
+    roles: Role
 
 class Token(BaseModel):
     access_token: str

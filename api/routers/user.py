@@ -9,6 +9,8 @@ from typing import Annotated, Union
 from fastapi.security import HTTPBasic
 from jose import JWTError, jwt
 import secrets
+from pymongo import DESCENDING
+from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 
 
@@ -75,6 +77,7 @@ async def save_user(user_create: UserCreate, db: AsyncIOMotorDatabase = Depends(
     full_name = user_data["full_name"]
     user_data["roles"]["admin"] = False
     user_data["roles"]["mercant"] = True
+    roles = user_data["roles"]
     disabled = False
 
     user_data["password"] = get_password_hash(password)
@@ -95,6 +98,7 @@ async def save_user(user_create: UserCreate, db: AsyncIOMotorDatabase = Depends(
             full_name=full_name,
             username=username,
             email=email,
+            roles=roles,
             disabled=disabled
         )
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Une erreur s'est produite.") 
@@ -116,6 +120,7 @@ async def get_current_user(token: str = Depends(JWTBearer()), db: AsyncIOMotorDa
     return User(
         username=user["username"],
         email=user["email"],
+        roles=user["roles"],
         disabled=user["disabled"],
         full_name=user["full_name"]
     )
@@ -154,6 +159,7 @@ async def login_for_access_token(user_data: UserLogin, db: AsyncIOMotorDatabase 
         "token": token,
         "username": user["username"],
         "email": user["email"],
+        "roles": user["roles"],
         "full_name": user["full_name"],
         "disabled": user["disabled"]
     }
@@ -205,6 +211,30 @@ async def reset_password(data: UserResetPassword, db: AsyncIOMotorDatabase = Dep
     await tokens.delete_one({"_id": code_document["_id"]})
 
     return {"message": "Mot de passe réinitialisé avec succès."}
+
+@router.get("/admin/users", response_model= list[User], dependencies=[Depends(JWTBearer())])
+async def read_all_users(user: User = Depends(get_current_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
+    collection: AsyncIOMotorCollection = db["users"]
+
+    user_admin = await collection.find_one({"email": user.email, "roles.admin": True})
+    if not user_admin:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    
+    users = await collection.find({}).sort("created_at", DESCENDING).to_list(length=None)
+
+    formatted_users = [
+        User(
+            id=str(ObjectId(user["_id"])),
+            username=user["username"],
+            full_name=user["full_name"],
+            email=user["email"],
+            roles=user["roles"],
+            disabled=user['disabled'],
+        )
+        for user in users
+    ]
+    
+    return formatted_users
 
 
 @router.get("/me", dependencies=[Depends(JWTBearer())])
