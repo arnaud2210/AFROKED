@@ -10,10 +10,10 @@
     "ENVIRONMENT": "development",
     "API_PORT": 8000,
     "SMTP_FROM": "",
-    "SMTP_PASSWORD": "",
+    "SMTP_PASSWORD": "vtkkryanlmogaseq",
     "SMTP_PORT": 587,
-    "SMTP_SERVER": "",
-    "SMTP_USERNAME": "",
+    "SMTP_SERVER": "smtp.gmail.com",
+    "SMTP_USERNAME": "adjimonarnaud@gmail.com",
     
     "type": "service_account",
     "project_id": "mbuckets-a6fe3",

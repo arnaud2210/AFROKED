@@ -75,6 +75,7 @@ async def create_product(
             category_id=product_data["category_id"],
             created_by=user.email,
             visibility=product_data["visibility"],
+            currency=product_data["currency"],
             created_at=product_data["created_at"],
             updated_at=product_data["updated_at"]
         )
