@@ -9,7 +9,7 @@
     "ALGORITHM": "HS256",
     "ENVIRONMENT": "development",
     "API_PORT": 8000,
-    "SMTP_FROM": "",
+    "SMTP_FROM": "adjimonarnaud@gmail.com",
     "SMTP_PASSWORD": "vtkkryanlmogaseq",
     "SMTP_PORT": 587,
     "SMTP_SERVER": "smtp.gmail.com",
