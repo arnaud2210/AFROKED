@@ -143,18 +143,22 @@ async def update_shopping_cart(order: CartModel, user: BotUserModel = Depends(ge
 @router.delete("/{product_id}", response_model=dict, dependencies=[Depends(JWTBearer())])
 async def remove_product_from_shopping_cart(product_id: str, user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
     collection: AsyncIOMotorCollection = db["shopping_cart"]
-    products: AsyncIOMotorCollection = db["products"]
-
+    
     existing_cart = await collection.find_one({"user_id": user.user_id, "visibility": False})
     if not existing_cart:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ce panier n'a pas été retrouvé")
     
+    # Vérifiez d'abord si le produit existe dans le panier
     product_to_delete = next((order for order in existing_cart['orders'] if order['product_id'] == product_id), None)
     if not product_to_delete:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Produit avec l'ID {product_id} non trouvé dans le panier de l'utilisateur")
     
-    result = await collection.update_one({"user_id": user.user_id}, {"$pull": {"orders": {"product_id": product_id}}})
-    
+    # Utilisez update_one() avec $pull pour retirer l'élément du tableau orders
+    result = await collection.update_one(
+        {"user_id": user.user_id, "visibility": False},
+        {"$pull": {"orders": {"product_id": product_id}}}
+    )
+
     if result.modified_count == 0:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Impossible de supprimer le produit avec l'ID {product_id} du panier de l'utilisateur")
 
