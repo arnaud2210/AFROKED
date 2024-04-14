@@ -68,9 +68,14 @@ def validate_shopping_cart(cart_id, user_id:int):
     # return response
     return response.status_code, response.json()
 
-def create_advertise(content, user_id:int):
+def create_advertise(infos: dict, user_id:int):
     # prepare data content
-    data = {"content": content}
+    data = {
+        "full_name": infos["full_name"],
+        "phone": infos["phone"],
+        "content": infos["content"],
+        "image": infos["image"]
+    }
     # get token from login
     _ , token = login(user_id)
     # login with token in headers

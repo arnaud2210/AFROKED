@@ -16,11 +16,15 @@ router = APIRouter()
 
 @router.post("/create", response_model=AdvertiseData, dependencies=[Depends(JWTBearer())])
 async def create_advertise(advertise: AdvertiseModel, user: BotUserModel = Depends(get_current_bot_user),db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
+    
     collection: AsyncIOMotorCollection = db["advertisements"]
 
     advertise_data = advertise.dict()
 
+    full_name = advertise_data["full_name"]
+    phone = advertise_data["phone"]
     content = advertise_data["content"]
+    image = advertise_data["image"]
     created_at = datetime.now()
        
     result = await collection.insert_one(
@@ -35,7 +39,10 @@ async def create_advertise(advertise: AdvertiseModel, user: BotUserModel = Depen
         return AdvertiseData(
             id=str(result.inserted_id),
             user_id=user.user_id,
+            full_name=full_name,
+            phone=phone,
             content=content,
+            image=image,
             created_at=created_at
         )
 
@@ -56,7 +63,10 @@ async def get_all_advertisements(user: User = Depends(get_current_user), db: Asy
         AdvertiseData(
             id=str(ObjectId(advertise["_id"])),
             user_id=advertise["user_id"],
+            full_name=advertise["full_name"],
+            phone=advertise["phone"],
             content=advertise["content"],
+            image=advertise["image"],
             created_at=advertise["created_at"]
         )
         for advertise in advertisements

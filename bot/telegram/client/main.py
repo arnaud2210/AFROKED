@@ -1,10 +1,13 @@
 from telebot import types
+from firebase import upload_file
 from v1 import (get_all_categories, get_all_products_by_category, get_product_details, 
                 add_to_cart, get_shopping_cart, validate_shopping_cart, create_advertise)
 import telebot
+import os
 
 TOKEN = "7003324615:AAGSf1JmzWi6nOUYBAm9zvYZlF0HwgxLrE4"
 MINI_APP_LINK = "https://t.me/afroked_bot/afromark"
+
 
 # Créer un bot Telegram
 bot = telebot.TeleBot(TOKEN)
@@ -173,13 +176,93 @@ def view_catalog(message):
     
     bot.send_message(message.chat.id, "Consulter tous les catalogues en cliquant sur le bouton suivant:", reply_markup=keyboard)
 
+
+##########################################
+# Make announcement
+##########################################
+
+
+# Dictionary to save user announcement informations
+user_infos = {}
+
+# Initiation de l'envoi de l'annonce
 @bot.message_handler(commands=["advertise"])
-def annonce_handler(message):
+def start_annonce(message):
     print(f"{message.chat.id}: Make annoncement")
-    bot.send_message(message.chat.id, "📤 Veuillez rédiger votre demande:")
+    bot.send_message(message.chat.id, "🙎‍♂️ Veuillez envoyer votre nom complet:")
+    bot.register_next_step_handler(message, get_full_name)
 
 
-@bot.message_handler(func=lambda message: True)
+def get_full_name(message):
+    if message.text.startswith("/cancel"):
+        return cancel_annonce
+    
+    if message.text:
+        user_infos["full_name"] = message.text
+        bot.send_message(message.chat.id, "📱 Veuillez envoyer votre numéro de contact:")
+        bot.register_next_step_handler(message, get_phone)
+    else:
+        bot.send_message(message.chat.id, "Le nom complet est requis. Veuillez réessayer.")
+        bot.register_next_step_handler(message, get_full_name)
+
+
+def get_phone(message):
+    
+    if message.text:
+        user_infos["phone"] = message.text
+        bot.send_message(message.chat.id, "📤 Veuillez envoyer une description de votre demande ou annonce:")
+        bot.register_next_step_handler(message, get_description)
+    else:
+        bot.send_message(message.chat.id, "Le numéro de contact est requis. Veuillez réessayer.")
+        bot.register_next_step_handler(message, get_phone)
+
+
+def get_description(message):
+    if message.text:
+        user_infos["content"] = message.text
+        bot.send_message(message.chat.id, "Veuillez envoyer une photo:")
+        bot.register_next_step_handler(message, get_picture)
+    else:
+        bot.send_message(message.chat.id, "La description est requise. Veuillez réessayer.")
+        bot.register_next_step_handler(message, get_description)
+
+
+def get_picture(message):
+    if message.photo:
+        # Enregistrer la photo dans la base de données ou effectuer d'autres opérations nécessaires
+
+        file_id = message.photo[-1].file_id
+        print(file_id)
+        file_info = bot.get_file(file_id)
+        print(file_info)
+
+        file_path_normalized = file_info.file_path.replace('\\', '/')
+        file_name = f"{file_info.file_unique_id}_{file_path_normalized.split('/')[-1]}" #_{file_info.file_path.split('/')[-1]} 
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        FILE_PATH = "photos/"
+
+        file_path = os.path.join(FILE_PATH, file_name)
+        with open(file_path, "wb") as file:
+            file.write(downloaded_file)
+        
+        user_infos["image"] = upload_file(file_path)
+
+        # call api to save announcement
+        status, _ = create_advertise(user_infos, message.chat.id)
+
+        if status == 200:
+            print(f"{message.chat.id}: send user annoncement")
+            bot.send_message(message.chat.id, "✅ Votre annonce a été enregistrée avec succès. Merci!")
+        else:
+            bot.send_message(message.chat.id, "Une erreur s'est produite. Veuillez réessayez")
+
+    else:
+        bot.send_message(message.chat.id, "Veuillez envoyer une photo (facultatif).")
+        bot.register_next_step_handler(message, get_picture)
+
+
+"""@bot.message_handler(func=lambda message: True)
 def store_annonce(message):
     # Vérifier si le message provient de la commande /annonce
     if message.text.startswith("/advertise"):
@@ -192,6 +275,13 @@ def store_annonce(message):
         bot.send_message(message.chat.id, "✅ Votre demande a été enregistrée avec succès.")
     else:
         bot.send_message(message.chat.id, "Une erreur s'est produite. Veuillez réessayez")
+"""
+
+@bot.message_handler(commands=["cancel"])
+def cancel_annonce(message):
+    # Réinitialiser les informations de l'utilisateur
+    user_infos.clear()
+    bot.send_message(message.chat.id, "Votre demande a été annulée. Vous pouvez démarrer une nouvelle demande avec /advertise.")
 
 
 # Démarrer le bot
