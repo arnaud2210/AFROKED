@@ -10,7 +10,6 @@ class ProductModel(BaseModel):
     image: str
     category_id: str
     currency: str
-    created_by: str
 
 class ProductData(BaseModel):
     id: str
@@ -27,15 +26,12 @@ class ProductData(BaseModel):
     updated_at: Optional[datetime]
 
 class ProductEdit(BaseModel):
-    id: str
     name: str
     price: str
     stock: int
     description: Optional[Text]
-    image: str
     category_id: str
-    visibility: bool
-    updated_at: Optional[datetime]
+    currency: str
 
 class ProductDelete(BaseModel):
     id: str

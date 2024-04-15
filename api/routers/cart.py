@@ -77,7 +77,7 @@ async def get_shopping_cart(user: BotUserModel = Depends(get_current_bot_user), 
         product_exist = await products.find_one({"_id": ObjectId(order["product_id"])})
 
         receipt_details = {
-            "product_id": str(ObjectId(product_exist["_id"])),
+            "product_id": str(ObjectId(product_exist["id"])),
             "product_name": product_exist["name"],
             "product_image": product_exist["image"],
             "product_stock": product_exist["stock"],

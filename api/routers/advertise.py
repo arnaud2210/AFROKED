@@ -16,7 +16,6 @@ router = APIRouter()
 
 @router.post("/create", response_model=AdvertiseData, dependencies=[Depends(JWTBearer())])
 async def create_advertise(advertise: AdvertiseModel, user: BotUserModel = Depends(get_current_bot_user),db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
-    
     collection: AsyncIOMotorCollection = db["advertisements"]
 
     advertise_data = advertise.dict()

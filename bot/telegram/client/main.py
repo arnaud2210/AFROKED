@@ -194,9 +194,7 @@ def start_annonce(message):
 
 
 def get_full_name(message):
-    if message.text.startswith("/cancel"):
-        return cancel_annonce
-    
+    print(f"{message.chat.id} -> Get full name")
     if message.text:
         user_infos["full_name"] = message.text
         bot.send_message(message.chat.id, "📱 Veuillez envoyer votre numéro de contact:")
@@ -207,9 +205,10 @@ def get_full_name(message):
 
 
 def get_phone(message):
-    
+    print(f"{message.chat.id} -> Get phone")
     if message.text:
         user_infos["phone"] = message.text
+
         bot.send_message(message.chat.id, "📤 Veuillez envoyer une description de votre demande ou annonce:")
         bot.register_next_step_handler(message, get_description)
     else:
@@ -218,6 +217,7 @@ def get_phone(message):
 
 
 def get_description(message):
+    print(f"{message.chat.id} -> Get description")
     if message.text:
         user_infos["content"] = message.text
         bot.send_message(message.chat.id, "Veuillez envoyer une photo:")
@@ -228,13 +228,13 @@ def get_description(message):
 
 
 def get_picture(message):
+    print(f"{message.chat.id} -> Get photo")
     if message.photo:
-        # Enregistrer la photo dans la base de données ou effectuer d'autres opérations nécessaires
 
         file_id = message.photo[-1].file_id
-        print(file_id)
+        #print(file_id)
         file_info = bot.get_file(file_id)
-        print(file_info)
+        #print(file_info)
 
         file_path_normalized = file_info.file_path.replace('\\', '/')
         file_name = f"{file_info.file_unique_id}_{file_path_normalized.split('/')[-1]}" #_{file_info.file_path.split('/')[-1]} 
@@ -249,10 +249,17 @@ def get_picture(message):
         user_infos["image"] = upload_file(file_path)
 
         # call api to save announcement
-        status, _ = create_advertise(user_infos, message.chat.id)
+        status, response = create_advertise(user_infos, message.chat.id)
 
         if status == 200:
+            message_text = f"**** RESUME DE VOTRE DEMANDE *****\n\n"
+            message_text += f"Propriétaire: {response['full_name']}\n"
+            message_text += f"Contact(s): {response['phone']}\n\n"
+            message_text += f"{response['content']}\n\n"
+            
             print(f"{message.chat.id}: send user annoncement")
+
+            bot.send_photo(message.chat.id, response["image"], caption=message_text)
             bot.send_message(message.chat.id, "✅ Votre annonce a été enregistrée avec succès. Merci!")
         else:
             bot.send_message(message.chat.id, "Une erreur s'est produite. Veuillez réessayez")

@@ -99,7 +99,7 @@ async def get_user_categories(user: User = Depends(get_current_user), db: AsyncI
 async def get_user_categories(db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
     collection: AsyncIOMotorCollection = db["categories"]
 
-    categories = await collection.find({}).sort("created_at", DESCENDING).to_list(length=None)
+    categories = await collection.find({}).sort("name", 1).to_list(length=None)
 
     formatted_categories = [
         CategoryData(

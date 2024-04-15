@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile
 from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorCollection
-from models.product import ProductData, ProductDelete
+from models.product import ProductData, ProductDelete, ProductModel
+from models.botuser import BotUserModel
+from routers.botuser import get_current_bot_user
 from models.user import User
 from routers.user import get_current_user
 from database.mongodb import connect_to_mongo

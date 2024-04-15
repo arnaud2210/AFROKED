@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Request
 
-from routers import user, botuser, category, product, order, cart, advertise
+from routers import user, botuser, category, product, order, cart, advertise, botproduct
 from database.mongodb import connect_to_mongo
 from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorCollection
 from fastapi.responses import RedirectResponse
@@ -28,8 +28,9 @@ app.mount("/static", StaticFiles(directory=static_path), name="ui")
 
 
 templates = Jinja2Templates(directory=templates_path)
-app.include_router(user.router, prefix="/api/auth", tags=["user"])
-app.include_router(botuser.router, prefix="/api/bot", tags=["bot user"])
+app.include_router(user.router, prefix="/api/auth", tags=["User"])
+app.include_router(botuser.router, prefix="/api/bot", tags=["Bot user"])
+app.include_router(botproduct.router, prefix="/api/bot/products", tags=["Bot product"])
 app.include_router(advertise.router, prefix="/api/advertise", tags=["Advertise Request"])
 app.include_router(category.router, prefix="/api/categories", tags=["Category Request"])
 app.include_router(product.router, prefix="/api/products", tags=["Product Request"])
