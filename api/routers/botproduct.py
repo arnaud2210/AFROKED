@@ -10,8 +10,7 @@ from datetime import datetime
 from pymongo import DESCENDING
 from bson.objectid import ObjectId
 from typing import Text, Optional, Dict
-import os
-import uuid
+import re
 
 router = APIRouter()
 
@@ -57,6 +56,35 @@ async def create_product(product: ProductModel, user: BotUserModel = Depends(get
             updated_at=created_at
         )
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur lors de l'enregistrement")
+
+@router.post("/search", response_model=list[ProductData])
+async def search_product(search_term: str, user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
+    collection: AsyncIOMotorCollection = db["products"]
+
+    regex_pattern = re.compile(re.escape(search_term), re.IGNORECASE)
+    query = {"created_by": str(user.user_id), "name": {"$regex": regex_pattern}}
+
+    products = await collection.find(query).sort("name", DESCENDING).to_list(length=None)
+     
+    formatted_products = [
+        ProductData(
+            id=str(ObjectId(product["_id"])),
+            name=product["name"],
+            price=product["price"],
+            stock=product["stock"],
+            description=product['description'],
+            image=product["image"],
+            category_id=product["category_id"],
+            created_by=product["created_by"],
+            visibility=product["visibility"],
+            currency=product["currency"],
+            created_at=product["created_at"],
+            updated_at=product["updated_at"]
+        )
+        for product in products
+    ]
+    
+    return formatted_products
 
 @router.get("/me/all", response_model=list[ProductData], dependencies=[Depends(JWTBearer())])
 async def get_user_products(user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):

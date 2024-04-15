@@ -13,6 +13,7 @@ from datetime import datetime
 from pymongo import DESCENDING
 from bson.objectid import ObjectId
 from typing import Text, Optional, Dict
+import re
 import os
 import uuid
 
@@ -170,6 +171,35 @@ async def get_all_products(db: AsyncIOMotorDatabase = Depends(connect_to_mongo))
 
     products = await collection.find({"visibility": True}).sort("created_at", DESCENDING).to_list(length=None)
 
+    formatted_products = [
+        ProductData(
+            id=str(ObjectId(product["_id"])),
+            name=product["name"],
+            price=product["price"],
+            stock=product["stock"],
+            description=product['description'],
+            image=product["image"],
+            category_id=product["category_id"],
+            created_by=product["created_by"],
+            visibility=product["visibility"],
+            currency=product["currency"],
+            created_at=product["created_at"],
+            updated_at=product["updated_at"]
+        )
+        for product in products
+    ]
+    
+    return formatted_products
+
+@router.post("/search", response_model=list[ProductData])
+async def search_product(search_term: str, db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
+    collection: AsyncIOMotorCollection = db["products"]
+
+    regex_pattern = re.compile(re.escape(search_term), re.IGNORECASE)
+    query = {"name": {"$regex": regex_pattern}}
+
+    products = await collection.find(query).sort("name", DESCENDING).to_list(length=None)
+     
     formatted_products = [
         ProductData(
             id=str(ObjectId(product["_id"])),
