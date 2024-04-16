@@ -112,7 +112,7 @@ async def validate_shopping_cart(cart_id: str, user: BotUserModel = Depends(get_
         }
     )
 
-    await orders.insert_one({"cart_id": cart_id, "user_id": user.user_id})
+    await orders.insert_one({"cart_id": cart_id, "user_id": user.user_id, "status": False, "created_at": datetime.now()})
 
     return {"detail": "Panier validé avec succès"}
 

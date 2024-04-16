@@ -210,6 +210,7 @@ def start_search(message):
 def get_search_query(message):
     print(f"{message.chat.id} -> Get search term query")
     if message.text:
+        bot.send_message(message.chat.id, "Recherche en cours...")
         status, response = search_item(message.text, message.chat.id)
         
         if status == 200:
