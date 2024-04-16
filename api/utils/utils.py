@@ -139,3 +139,20 @@ async def check_product_storage(product_id, quantity: int, db: AsyncIOMotorDatab
     await collection.update_one({"_id": ObjectId(product_id)}, {"$set": {"stock": stock_update}})
 
     return True
+
+
+async def cancel_product(product_id: str, quantity: int, db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
+    collection: AsyncIOMotorCollection = db["products"]
+
+    product = await collection.find_one({"_id": ObjectId(product_id)})
+
+    stock_update = product["stock"] + quantity
+
+    await collection.update_one(
+        {"_id": ObjectId(product_id)},
+        {
+            "$set": {"stock": stock_update}
+        }
+    )
+
+    return True

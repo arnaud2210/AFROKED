@@ -16,6 +16,13 @@ def login(user_id):
 
     return response.status_code, token
 
+def search_item(search_term):
+    # prepare data content
+    data = {"search_term": search_term}
+    # send request to api
+    response = requests.post(f"{LOCAL_BASE_URL}/products/search", params=data)
+    return response.status_code, response.json()
+
 def get_all_categories():
     response = requests.get(f"{LOCAL_BASE_URL}/categories/all")
     # return list of categories

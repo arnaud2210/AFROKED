@@ -4,7 +4,7 @@ from models.cart import CartModel, CartData, CartDelete
 from models.botuser import BotUserModel
 from routers.botuser import get_current_bot_user
 from database.mongodb import connect_to_mongo
-from utils.utils import JWTBearer, check_product_storage
+from utils.utils import JWTBearer, check_product_storage, cancel_product
 import starlette.status as status
 from datetime import datetime
 from pymongo import DESCENDING
@@ -153,13 +153,21 @@ async def remove_product_from_shopping_cart(product_id: str, user: BotUserModel 
     if not product_to_delete:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Produit avec l'ID {product_id} non trouvé dans le panier de l'utilisateur")
     
-    # Utilisez update_one() avec $pull pour retirer l'élément du tableau orders
-    result = await collection.update_one(
-        {"user_id": user.user_id, "visibility": False},
-        {"$pull": {"orders": {"product_id": product_id}}}
-    )
+    # Quantité du produit à supprimer
+    quantity_to_delete = product_to_delete.get('quantity')
 
-    if result.modified_count == 0:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Impossible de supprimer le produit avec l'ID {product_id} du panier de l'utilisateur")
+    stock_update = await cancel_product(product_id, quantity_to_delete, db)
+        
+    if stock_update == True:
+        # Utilisez update_one() avec $pull pour retirer l'élément du tableau orders
+        result = await collection.update_one(
+            {"user_id": user.user_id, "visibility": False},
+            {"$pull": {"orders": {"product_id": product_id}}}
+        )
 
-    return {"detail": f"Produit avec l'ID {product_id} supprimé du panier avec succès"}
+        if result.modified_count == 0:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Impossible de supprimer le produit avec l'ID {product_id} du panier de l'utilisateur")
+        
+        return {"detail": f"Produit avec l'ID {product_id} supprimé du panier avec succès"}
+    
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Une erreur s'est porduite lors de la suppression")

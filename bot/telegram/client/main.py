@@ -1,7 +1,8 @@
 from telebot import types
 from firebase import upload_file
 from v1 import (get_all_categories, get_all_products_by_category, get_product_details, 
-                add_to_cart, get_shopping_cart, validate_shopping_cart, create_advertise)
+                add_to_cart, get_shopping_cart, validate_shopping_cart, create_advertise,
+                search_item)
 import telebot
 import os
 
@@ -28,6 +29,7 @@ message_for_welcome = """
     ➡️ /catalog - Voir le catalogue de produits
     ➡️ /mycart - Voir ce que vous avez dans votre panier
     ➡️ /myreceipt - Voir votre facture
+    ➡️ /search - Recherche produit
 
     💌 Prêt à commencer votre aventure de shopping ? Cliquez sur les boutons ci-dessus et laissez-vous emporter ! 💌
     """
@@ -175,6 +177,31 @@ def view_catalog(message):
     print(f"{message.chat.id}: View all product")
     
     bot.send_message(message.chat.id, "Consulter tous les catalogues en cliquant sur le bouton suivant:", reply_markup=keyboard)
+
+# Effectuer une recherche
+@bot.message_handler(commands=['search'])
+def start_search(message):
+    print(f"{message.chat.id}: Start search")
+    bot.send_message(message.chat.id, "Veuillez entrer le nom du produit:")
+    bot.register_next_step_handler(message, get_search_query)
+
+def get_search_query(message):
+    print(f"{message.chat.id} -> Get search term query")
+    if message.text:
+        status, response = search_item(message.text)
+        
+        if status == 200:
+            for product in response:
+                message_text = f"{product['name']} ({product['stock']})\n\n"
+                message_text += f"Prix: {product['price']} {product['currency']}\n\n"
+                message_text += f"{product['description']}\n\n"
+                bot.send_photo(message.chat.id, product["image"], caption=message_text)
+        else:
+            bot.send_message(message.chat.id, "Aucun produit trouvé sous ce nom")
+        
+    else:
+        bot.send_message(message.chat.id, "Le nom du produit est requis. Veuillez réessayer.")
+        bot.register_next_step_handler(message, get_search_query)
 
 
 ##########################################

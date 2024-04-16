@@ -1,6 +1,6 @@
 from telebot import types
 from firebase import upload_file
-from v1 import (create_product, get_all_categories)
+from v1 import (create_product, get_all_categories, search_item)
 import telebot
 import uuid
 import os
@@ -198,6 +198,32 @@ def get_product_image(message):
     else:
         bot.send_message(message.chat.id, "Veuillez envoyer une photo.")
         bot.register_next_step_handler(message, get_product_image)
+
+
+# Effectuer une recherche
+@bot.message_handler(commands=['search'])
+def start_search(message):
+    print(f"{message.chat.id}: Start search")
+    bot.send_message(message.chat.id, "Veuillez entrer le nom du produit:")
+    bot.register_next_step_handler(message, get_search_query)
+
+def get_search_query(message):
+    print(f"{message.chat.id} -> Get search term query")
+    if message.text:
+        status, response = search_item(message.text, message.chat.id)
+        
+        if status == 200:
+            for product in response:
+                message_text = f"{product['name']} ({product['stock']})\n\n"
+                message_text += f"Prix: {product['price']} {product['currency']}\n\n"
+                message_text += f"{product['description']}\n\n"
+                bot.send_photo(message.chat.id, product["image"], caption=message_text)
+        else:
+            bot.send_message(message.chat.id, "Aucun produit trouvé sous ce nom")
+        
+    else:
+        bot.send_message(message.chat.id, "Le nom du produit est requis. Veuillez réessayer.")
+        bot.register_next_step_handler(message, get_search_query)
 
 
 

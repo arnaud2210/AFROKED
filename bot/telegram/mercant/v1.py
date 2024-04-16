@@ -41,3 +41,14 @@ def create_product(collection: dict, user_id:int):
 
     return response.status_code, response.json()
 
+def search_item(search_term: str, user_id: int):
+    # get token from login
+    _ , token = login(user_id)
+    # login with token in headers
+    headers = {"Authorization": f"Bearer {token}"}
+    # prepare data content
+    data = {"search_term": search_term}
+    # send request to api
+    response = requests.post(f"{LOCAL_BASE_URL}/bot/products/search", headers=headers, params=data)
+    return response.status_code, response.json()
+
