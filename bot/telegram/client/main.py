@@ -196,7 +196,11 @@ def get_search_query(message):
                 message_text = f"{product['name']} ({product['stock']})\n\n"
                 message_text += f"Prix: {product['price']} {product['currency']}\n\n"
                 message_text += f"{product['description']}\n\n"
-                bot.send_photo(message.chat.id, product["image"], caption=message_text)
+
+                keyboard = types.InlineKeyboardMarkup(row_width=2)
+                keyboard.add(types.InlineKeyboardButton("🛒 Ajouter au panier", callback_data=f"add_to_cart_{product['id']}"))
+
+                bot.send_photo(message.chat.id, product["image"], caption=message_text, reply_markup=keyboard)
         else:
             bot.send_message(message.chat.id, "Aucun produit trouvé sous ce nom")
         

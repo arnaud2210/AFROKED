@@ -1,6 +1,6 @@
 from telebot import types
 from firebase import upload_file
-from v1 import (create_product, get_all_categories, search_item)
+from v1 import (create_product, get_all_categories, search_item, delete_product, get_all_orders, validate_order)
 import telebot
 import uuid
 import os
@@ -218,7 +218,11 @@ def get_search_query(message):
                 message_text = f"{product['name']} ({product['stock']})\n\n"
                 message_text += f"Prix: {product['price']} {product['currency']}\n\n"
                 message_text += f"{product['description']}\n\n"
-                bot.send_photo(message.chat.id, product["image"], caption=message_text)
+
+                keyboard = types.InlineKeyboardMarkup(row_width=2)
+                keyboard.add(types.InlineKeyboardButton("❌ Supprimer", callback_data=f"delete_{product['id']}"))
+
+                bot.send_photo(message.chat.id, product["image"], caption=message_text, reply_markup=keyboard)
         else:
             bot.send_message(message.chat.id, "Aucun produit trouvé sous ce nom")
         
@@ -226,7 +230,68 @@ def get_search_query(message):
         bot.send_message(message.chat.id, "Le nom du produit est requis. Veuillez réessayer.")
         bot.register_next_step_handler(message, get_search_query)
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith("delete_"))
+def delete_product_handler(call):
+    data_parts = call.data.split("_")
+    product_id = data_parts[1]
 
+    # supprimer le produit du panier
+    status, _ = delete_product(product_id, call.message.chat.id)
+
+    if status == 200:
+        print(f"{call.message.chat.id}: Delete product {[product_id]}")
+        bot.send_message(call.message.chat.id, "✅ Produit supprimé")
+        
+    else:
+        bot.answer_callback_query(call.id, "Une erreur est survenue")
+        print(f"{call.message.chat.id}: Error when deleting {[product_id]}")
+
+@bot.message_handler(commands=['orders'])
+def show_orders(message):
+    print(f"{message.chat.id}: Get orders")
+    bot.send_message(message.chat.id, "Traitement en cours...")
+
+    all_items = []
+    # Request to get all orders
+    status, orders = get_all_orders(message.chat.id)
+
+    if status == 200 and orders == []:
+        bot.send_message(message.chat.id, "Désolé! Vous n'avez aucune commande.")
+    else:        
+        for order in orders:
+            user_id = order["user_id"]
+            total_order_amount = order["total_order_amount"]
+
+        for product in order["orders"]:
+            product_text = (f"{product['product_name']} - Quantité: {product['quantity']} - Prix unitaire: {product['unit_price']} - Prix total: {product['total_unit']} {product['currency']}")
+            all_items.append(product_text)
+        
+        if all_items:
+            order_contents = "\n\n".join(all_items)
+            message_text = f"**Commande {[user_id]}:**\n\n{order_contents}\n\n**Total:** {total_order_amount} {product['currency']}"           
+
+            keyboard = types.InlineKeyboardMarkup()
+            keyboard.add(types.InlineKeyboardButton(text="✅ Valider la commande", callback_data=f"order_{user_id}"))
+        
+        bot.send_message(message.chat.id, message_text, parse_mode="Markdown", reply_markup=keyboard)
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("order_"))
+def order_handler(call):
+    data_parts = call.data.split("_")
+    seller_id = data_parts[1]
+
+    print(f"{call.message.chat.id}: Validate user {[seller_id]}")
+
+    status, order = validate_order(seller_id, call.message.chat.id)
+
+    bot.send_message(call.message.chat.id, "Validation en cours ...")
+
+    if status == 200:
+        bot.send_message(call.message.chat.id, order["detail"])
+    else:
+        bot.send_message(call.message.chat.id, "Une erreur est survenue. Veuillez réessayez !")
+    
 
 # Démarrer le bot
 bot.polling()

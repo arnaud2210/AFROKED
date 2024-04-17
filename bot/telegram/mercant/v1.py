@@ -21,6 +21,26 @@ def get_all_categories():
     # return list of categories
     return response.status_code, response.json()
 
+def get_all_orders(user_id:int):
+    # get token from login
+    _ , token = login(user_id)
+    # login with token in headers
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = requests.get(f"{LOCAL_BASE_URL}/bot/orders/all", headers=headers)
+    # return details of shopping cart
+    return response.status_code, response.json()
+
+def validate_order(seller_id:int, user_id:int):
+    # get token from login
+    _ , token = login(user_id)
+    # login with token in headers
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = requests.put(f"{LOCAL_BASE_URL}/bot/orders/validate/{seller_id}", headers=headers)
+    # return details of shopping cart
+    return response.status_code, response.json()
+
 def create_product(collection: dict, user_id:int):
     # get token from login
     _ , token = login(user_id)
@@ -52,3 +72,11 @@ def search_item(search_term: str, user_id: int):
     response = requests.post(f"{LOCAL_BASE_URL}/bot/products/search", headers=headers, params=data)
     return response.status_code, response.json()
 
+def delete_product(product_id: str, user_id: int):
+    # get token from login
+    _ , token = login(user_id)
+    # login with token in headers
+    headers = {"Authorization": f"Bearer {token}"}
+    # send request to api
+    response = requests.delete(f"{LOCAL_BASE_URL}/bot/products/{product_id}", headers=headers)
+    return response.status_code, response.json()

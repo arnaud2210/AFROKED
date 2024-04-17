@@ -145,7 +145,7 @@ async def edit_product(product_id: str, product: ProductEdit, user: BotUserModel
 async def remove_product(product_id: str, user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
     collection: AsyncIOMotorCollection = db["products"]
 
-    existing = await collection.find_one({"_id": ObjectId(product_id), "created_by": user.user_id})
+    existing = await collection.find_one({"_id": ObjectId(product_id), "created_by": str(user.user_id)})
     if existing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Produit non trouvé")
     
