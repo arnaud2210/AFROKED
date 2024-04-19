@@ -196,7 +196,7 @@ async def search_product(search_term: str, db: AsyncIOMotorDatabase = Depends(co
     collection: AsyncIOMotorCollection = db["products"]
 
     regex_pattern = re.compile(re.escape(search_term), re.IGNORECASE)
-    query = {"name": {"$regex": regex_pattern}}
+    query = {"name": {"$regex": regex_pattern}, "visibility": True}
 
     products = await collection.find(query).sort("name", DESCENDING).to_list(length=None)
      

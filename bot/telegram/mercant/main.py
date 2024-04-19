@@ -56,8 +56,40 @@ product = {}
 @bot.message_handler(commands=["newproduct"])
 def start_creation_product(message):
     print(f"{message.chat.id}: Product creation")
-    bot.send_message(message.chat.id, "🙎‍♂️ Veuillez envoyer le nom du produit:")
-    bot.register_next_step_handler(message, get_product_name)
+    # get all categories
+    _, categories = get_all_categories()
+    # return all categories in button
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for category in categories:
+        keyboard.add(types.KeyboardButton(category["name"]))
+        
+    bot.send_message(message.chat.id, "Veuillez choisir la catégorie auquelle appartient votre produit:", reply_markup=keyboard)
+    #bot.send_message(message.chat.id, "🙎‍♂️ Veuillez envoyer le nom du produit:")
+
+
+_, categories = get_all_categories()
+
+@bot.message_handler(func=lambda message: message.text in [category['name'] for category in categories])
+def get_product_category(message):
+    print(f"{message.chat.id} -> Get product category")
+
+    category_name = message.text
+    category_id = next(category['id'] for category in categories if category['name'] == category_name)
+    
+    if message.text:
+        product["category_id"] = category_id
+        bot.send_message(message.chat.id, "🙎‍♂️ Veuillez envoyer le nom du produit:")
+        bot.register_next_step_handler(message, get_product_name)
+        """currencies_keyboard = types.InlineKeyboardMarkup()
+
+        for currency in currencies:
+            currency_button = types.InlineKeyboardButton(text=currency, callback_data=f"currency_{currency}")
+            currencies_keyboard.add(currency_button)
+        bot.send_message(message.chat.id, "Veuillez choisir la monnaie:", reply_markup=currencies_keyboard)"""
+        
+    else:
+        bot.send_message(message.chat.id, "La description est requise. Veuillez réessayer.")
+        bot.register_next_step_handler(message, choose_category)
 
 
 def get_product_name(message):
@@ -86,7 +118,7 @@ def get_product_stock(message):
     print(f"{message.chat.id} -> Get product stock")
     if message.text:
         product["stock"] = message.text
-        bot.send_message(message.chat.id, "Veuillez la description du produit:")
+        bot.send_message(message.chat.id, "Veuillez donner la description du produit:")
         bot.register_next_step_handler(message, get_product_description)
     else:
         bot.send_message(message.chat.id, "Le nombre en stock est requis. Veuillez réessayer.")
@@ -97,15 +129,9 @@ def get_product_description(message):
     print(f"{message.chat.id} -> Get product description")
     if message.text:
         product["description"] = message.text
-         # get all categories
-        _, categories = get_all_categories()
-        # return all categories in button
-        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        for category in categories:
-            keyboard.add(types.KeyboardButton(category["name"]))
-        
-        bot.send_message(message.chat.id, "Veuillez choisir la catégorie auquelle appartient votre produit:", reply_markup=keyboard)
-        #bot.register_next_step_handler(message, choose_category)
+
+        bot.send_message(message.chat.id, "Veuillez envoyer une photo:")
+        bot.register_next_step_handler(message, get_product_image)
     else:
         bot.send_message(message.chat.id, "La description est requise. Veuillez réessayer.")
         bot.register_next_step_handler(message, get_product_description)
@@ -120,29 +146,6 @@ def choose_category(message):
         keyboard.add(types.KeyboardButton(category["name"]))
     
     bot.send_message(message.chat.id, "Veuillez choisir la catégorie auquelle appartient votre produit:", reply_markup=keyboard)
-
-
-_, categories = get_all_categories()
-
-@bot.message_handler(func=lambda message: message.text in [category['name'] for category in categories])
-def get_product_category(message):
-    print(f"{message.chat.id} -> Get product category")
-
-    category_name = message.text
-    category_id = next(category['id'] for category in categories if category['name'] == category_name)
-    
-    if message.text:
-        product["category_id"] = category_id
-        currencies_keyboard = types.InlineKeyboardMarkup()
-
-        for currency in currencies:
-            currency_button = types.InlineKeyboardButton(text=currency, callback_data=f"currency_{currency}")
-            currencies_keyboard.add(currency_button)
-        bot.send_message(message.chat.id, "Veuillez choisir la monnaie:", reply_markup=currencies_keyboard)
-        
-    else:
-        bot.send_message(message.chat.id, "La description est requise. Veuillez réessayer.")
-        bot.register_next_step_handler(message, choose_category)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("currency_"))
@@ -213,18 +216,19 @@ def get_search_query(message):
         bot.send_message(message.chat.id, "Recherche en cours...")
         status, response = search_item(message.text, message.chat.id)
         
-        if status == 200:
+        if status == 200 and response == []:
+            bot.send_message(message.chat.id, "Aucun produit trouvé sous ce nom")
+        else:
             for product in response:
                 message_text = f"{product['name']} ({product['stock']})\n\n"
                 message_text += f"Prix: {product['price']} {product['currency']}\n\n"
                 message_text += f"{product['description']}\n\n"
 
                 keyboard = types.InlineKeyboardMarkup(row_width=2)
-                keyboard.add(types.InlineKeyboardButton("❌ Supprimer", callback_data=f"delete_{product['id']}"))
+                if product["created_by"] == str(message.chat.id):
+                    keyboard.add(types.InlineKeyboardButton("❌ Supprimer", callback_data=f"delete_{product['id']}"))
 
                 bot.send_photo(message.chat.id, product["image"], caption=message_text, reply_markup=keyboard)
-        else:
-            bot.send_message(message.chat.id, "Aucun produit trouvé sous ce nom")
         
     else:
         bot.send_message(message.chat.id, "Le nom du produit est requis. Veuillez réessayer.")
@@ -254,6 +258,8 @@ def show_orders(message):
     all_items = []
     # Request to get all orders
     status, orders = get_all_orders(message.chat.id)
+    print(status)
+    print("oders", orders)
 
     if status == 200 and orders == []:
         bot.send_message(message.chat.id, "Désolé! Vous n'avez aucune commande.")

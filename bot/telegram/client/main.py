@@ -191,7 +191,9 @@ def get_search_query(message):
         bot.send_message(message.chat.id, "Recherche en cours...")
         status, response = search_item(message.text)
         
-        if status == 200:
+        if status == 200 and response == []:
+            bot.send_message(message.chat.id, "Aucun produit trouvé sous ce nom")
+        else:
             for product in response:
                 message_text = f"{product['name']} ({product['stock']})\n\n"
                 message_text += f"Prix: {product['price']} {product['currency']}\n\n"
@@ -201,8 +203,6 @@ def get_search_query(message):
                 keyboard.add(types.InlineKeyboardButton("🛒 Ajouter au panier", callback_data=f"add_to_cart_{product['id']}"))
 
                 bot.send_photo(message.chat.id, product["image"], caption=message_text, reply_markup=keyboard)
-        else:
-            bot.send_message(message.chat.id, "Aucun produit trouvé sous ce nom")
         
     else:
         bot.send_message(message.chat.id, "Le nom du produit est requis. Veuillez réessayer.")
@@ -315,6 +315,21 @@ def store_annonce(message):
     else:
         bot.send_message(message.chat.id, "Une erreur s'est produite. Veuillez réessayez")
 """
+
+@bot.message_handler(commands=['phone'])
+def ask_phone_number(message):
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button = types.KeyboardButton(text="Partager mon numéro de téléphone", request_contact=True)
+    keyboard.add(button)
+
+    bot.reply_to(message, "Pour continuer, veuillez partager votre numéro de téléphone :", reply_markup=keyboard)
+
+# Traitement de la réponse au numéro de téléphone
+@bot.message_handler(content_types=['contact'])
+def handle_contact(message):
+    phone_number = message.contact.phone_number
+    bot.reply_to(message, f"Merci d'avoir partagé votre numéro de téléphone : {phone_number}")
+
 
 @bot.message_handler(commands=["cancel"])
 def cancel_annonce(message):

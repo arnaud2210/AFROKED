@@ -1,8 +1,8 @@
 import requests
 
-#LOCAL_BASE_URL="https://afroked.onrender.com/api"
+LOCAL_BASE_URL="https://afroked.onrender.com/api"
 
-LOCAL_BASE_URL="http://localhost:8000/api"
+#LOCAL_BASE_URL="http://localhost:8000/api"
 
 
 # Save or login with bot user to get token
@@ -49,12 +49,12 @@ def create_product(collection: dict, user_id:int):
     # prepare data content
     data = {
         "name": collection["name"],
-        "price": collection["price"],
-        "stock": collection["stock"],
+        "price": float(collection["price"]),
+        "stock": int(collection["stock"]),
         "description": collection["description"],
         "image": collection["image"],
         "category_id": collection["category_id"],
-        "currency": collection["currency"]
+        "currency": "FCFA"
     }
     # send request to api
     response = requests.post(f"{LOCAL_BASE_URL}/bot/products/create", json=data, headers=headers)
