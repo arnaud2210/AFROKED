@@ -26,7 +26,7 @@ async def get_user_orders(user: BotUserModel = Depends(get_current_bot_user), db
         product_data = await products.find_one({"_id": ObjectId(order["product_id"]), "created_by": str(user.user_id)})
 
         order_items = {
-            "product_id": str(ObjectId(product_data["_id"])),
+            "product_id": order["product_id"],
             "product_name": product_data["name"],
             "product_image": product_data["image"],
             "quantity": order["quantity"],
