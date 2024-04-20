@@ -229,39 +229,6 @@ async def get_user_products(user: BotUserModel = Depends(get_current_bot_user), 
     
     return formatted_user_products
 
-@router.get("/{category_id}/products", response_model=list[ProductData])
-async def get_all_products_by_category(
-    category_id: str,
-    user: BotUserModel = Depends(get_current_bot_user),
-    db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
-
-    collection: AsyncIOMotorCollection = db["products"]
-
-    query = {"category_id": category_id, "created_by": str(user.user_id)}
-
-    products = await collection.find(query).sort("created_at", DESCENDING).to_list(length=None)
-
-    formatted_products = [
-        ProductData(
-            id=str(ObjectId(product["_id"])),
-            name=product["name"],
-            price=product["price"],
-            stock=product["stock"],
-            description=product['description'],
-            image=product["image"],
-            category_id=product["category_id"],
-            created_by=product["created_by"],
-            visibility=product["visibility"],
-            currency=product["currency"],
-            created_at=product["created_at"],
-            updated_at=product["updated_at"]
-        )
-        for product in products
-    ]
-
-    return formatted_products
-
-
 @router.put("/edit/{product_id}", response_model=dict, dependencies=[Depends(JWTBearer())])
 async def edit_product(product_id: str, product: ProductEdit, user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
     collection: AsyncIOMotorCollection = db["products"]
