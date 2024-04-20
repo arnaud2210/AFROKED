@@ -23,7 +23,7 @@ async def get_all_products_by_category(
 
     collection: AsyncIOMotorCollection = db["products"]
 
-    query = {"category_id": category_id, "created_by": str(user.user_id)}
+    query = {"category_id": category_id}
 
     products = await collection.find(query).sort("created_at", DESCENDING).to_list(length=None)
 
