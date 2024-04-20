@@ -207,7 +207,7 @@ async def search_product(search_term: str, user: BotUserModel = Depends(get_curr
 async def get_user_products(user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
     collection: AsyncIOMotorCollection = db["products"]
     
-    products = await collection.find({"created_by": user.user_id}).sort("created_at", DESCENDING).to_list(length=None)
+    products = await collection.find({"created_by": str(user.user_id)}).sort("created_at", DESCENDING).to_list(length=None)
 
     formatted_user_products = [
         ProductData(
@@ -233,7 +233,7 @@ async def get_user_products(user: BotUserModel = Depends(get_current_bot_user), 
 async def edit_product(product_id: str, product: ProductEdit, user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
     collection: AsyncIOMotorCollection = db["products"]
 
-    existing = await collection.find_one({"_id": ObjectId(product_id), "created_by": user.email})
+    existing = await collection.find_one({"_id": ObjectId(product_id), "created_by": str(user.user_id)})
     if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ce produit n'existe pas")
     
