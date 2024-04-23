@@ -11,3 +11,7 @@ class BotUserData(BaseModel):
     user_id: int
     plateform: str
     joined_at: Optional[datetime]
+
+class BotUserUpdate(BaseModel):
+    full_name: str
+    contact: str

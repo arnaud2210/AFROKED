@@ -16,6 +16,18 @@ def login(user_id):
 
     return response.status_code, token
 
+def validate_user_infos(user_data, user_id:int):
+    # get token from login
+    _ , token = login(user_id)
+    # login with token in headers
+    headers = {"Authorization": f"Bearer {token}"}
+    # prepare data content
+    data = {"full_name": user_data["full_name"], "contact": user_data["contact"]}
+    # send request to api
+    response = requests.put(f"{LOCAL_BASE_URL}/bot/infos", json=data, headers=headers)
+    # return response
+    return response.status_code, response.json()
+
 def search_item(search_term):
     # prepare data content
     data = {"search_term": search_term}

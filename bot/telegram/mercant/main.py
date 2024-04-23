@@ -1,6 +1,7 @@
 from telebot import types
 from firebase import upload_file
-from v1 import (create_product, get_all_categories, search_item, delete_product, get_all_orders, validate_order)
+from v1 import (create_product, get_all_categories, search_item, delete_product, get_all_orders, validate_order,
+                validate_user_infos)
 import telebot
 import uuid
 import os
@@ -266,6 +267,8 @@ def show_orders(message):
     else:        
         for order in orders:
             user_id = order["user_id"]
+            contact = order["contact"]
+            full_name = order["full_name"]
             total_order_amount = order["total_order_amount"]
 
         for product in order["orders"]:
@@ -274,7 +277,7 @@ def show_orders(message):
         
         if all_items:
             order_contents = "\n\n".join(all_items)
-            message_text = f"**Commande {[user_id]}:**\n\n{order_contents}\n\n**Total:** {total_order_amount} {product['currency']}"           
+            message_text = f"**Commande N°{[user_id]}:\n\nContact client: {contact}**\n\n{order_contents}\n\n**Total:** {total_order_amount} {product['currency']}"           
 
             keyboard = types.InlineKeyboardMarkup()
             keyboard.add(types.InlineKeyboardButton(text="✅ Valider la commande", callback_data=f"order_{user_id}"))
@@ -297,7 +300,32 @@ def order_handler(call):
         bot.send_message(call.message.chat.id, order["detail"])
     else:
         bot.send_message(call.message.chat.id, "Une erreur est survenue. Veuillez réessayez !")
-    
+
+@bot.message_handler(commands=['setinfos'])
+def ask_phone_number(message):
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button = types.KeyboardButton(text="Partager mon numéro de téléphone", request_contact=True)
+    keyboard.add(button)
+
+    bot.reply_to(message, "Pour continuer, veuillez partager votre numéro de téléphone :", reply_markup=keyboard)
+
+# Traitement de la réponse au numéro de téléphone
+@bot.message_handler(content_types=['contact'])
+def handle_contact(message):
+    print(f"{message.chat.id}: Set user infos")
+    phone_number = message.contact.phone_number
+    first_name = message.from_user.first_name
+    last_name = message.from_user.last_name
+
+    user_data = {"full_name": f"{last_name} {first_name}", "contact": str(phone_number)}
+
+    status, _ = validate_user_infos(user_data, message.chat.id)
+
+    if status == 200:
+        print(f"{message.chat.id}: User infos successfully share")
+        bot.send_message(message.chat.id, f"Merci d'avoir partagé votre numéro de téléphone : {phone_number}")
+    else:
+        bot.send_message(message.chat.id, "Veuillez réessayez s'il vous plait !")    
 
 # Démarrer le bot
 bot.polling()

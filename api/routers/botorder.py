@@ -18,6 +18,7 @@ router = APIRouter()
 async def get_user_orders(user: BotUserModel = Depends(get_current_bot_user), db: AsyncIOMotorDatabase = Depends(connect_to_mongo)):
     collection: AsyncIOMotorCollection = db["orders"]
     products : AsyncIOMotorCollection = db["products"]
+    users: AsyncIOMotorCollection = db["botusers"]
     
     orders = await collection.find({"status": False}).to_list(length=None)
 
@@ -42,10 +43,14 @@ async def get_user_orders(user: BotUserModel = Depends(get_current_bot_user), db
     
     grouped_orders = []
     for user_id, group in groupby(items, key=lambda x: x["user_id"]):
+        user_exist = await users.find_one({"user_id": int(user_id)})
+        print(user_exist)
         user_orders = list(group)
         total_order_amount = sum(order['total_unit'] for order in user_orders)
         user_data = {
             "user_id": user_id,
+            "full_name": user_exist["full_name"],
+            "contact": user_exist["contact"],
             "orders": user_orders,
             "total_order_amount": total_order_amount
         }

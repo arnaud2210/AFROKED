@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase, AsyncIOMotorCollection
-from models.botuser import BotUserModel
+from models.botuser import BotUserModel, BotUserUpdate
 from database.mongodb import connect_to_mongo
 from utils.utils import create_jwt_token, get_env_var, JWTBearer, decodeJWT
 from datetime import datetime
@@ -52,7 +52,13 @@ async def save_botuser(botuser: BotUserModel, db: AsyncIOMotorDatabase = Depends
 
     token = create_jwt_token({"user_id": user_id})
         
-    result = await collection.insert_one({**user_data, "joined_at": joined_at})
+    result = await collection.insert_one(
+        {
+            **user_data,
+            "full_name": None,
+            "contact": None, 
+            "joined_at": joined_at
+        })
 
     if result.inserted_id:
         return {
@@ -77,3 +83,27 @@ async def login_botuser(botuser: BotUserModel, db: AsyncIOMotorDatabase = Depend
             "token": token,
             "user_id": botuser.user_id
         }
+
+@router.put("/infos", response_model=dict)
+async def update_botuser_info(
+    botuser: BotUserUpdate,
+    user: BotUserModel = Depends(get_current_bot_user), 
+    db: AsyncIOMotorDatabase = Depends(connect_to_mongo)
+    ):
+    
+    collection: AsyncIOMotorCollection = db["botusers"]
+    
+    user_exist = await collection.find_one({"user_id": user.user_id}, {"_id":0})
+    user_data = botuser.dict()
+
+    if not user_exist:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vous n'avez pas de compte.")
+    
+    await collection.update_one(
+        {"user_id": user.user_id},
+        {
+            "$set": { **user_data }
+        }
+    )
+
+    return {"detail": "user updated successfully"}

@@ -1,8 +1,8 @@
 import requests
 
-LOCAL_BASE_URL="https://afroked.onrender.com/api"
+#LOCAL_BASE_URL="https://afroked.onrender.com/api"
 
-#LOCAL_BASE_URL="http://localhost:8000/api"
+LOCAL_BASE_URL="http://localhost:8000/api"
 
 
 # Save or login with bot user to get token
@@ -15,6 +15,18 @@ def login(user_id):
     token = response.json()["token"]
 
     return response.status_code, token
+
+def validate_user_infos(user_data, user_id:int):
+    # get token from login
+    _ , token = login(user_id)
+    # login with token in headers
+    headers = {"Authorization": f"Bearer {token}"}
+    # prepare data content
+    data = {"full_name": user_data["full_name"], "contact": user_data["contact"]}
+    # send request to api
+    response = requests.put(f"{LOCAL_BASE_URL}/bot/infos", json=data, headers=headers)
+    # return response
+    return response.status_code, response.json()
 
 def get_all_categories():
     response = requests.get(f"{LOCAL_BASE_URL}/categories/all")

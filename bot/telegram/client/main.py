@@ -2,7 +2,7 @@ from telebot import types
 from firebase import upload_file
 from v1 import (get_all_categories, get_all_products_by_category, get_product_details, 
                 add_to_cart, get_shopping_cart, validate_shopping_cart, create_advertise,
-                search_item)
+                search_item, validate_user_infos)
 import telebot
 import os
 
@@ -316,7 +316,7 @@ def store_annonce(message):
         bot.send_message(message.chat.id, "Une erreur s'est produite. Veuillez réessayez")
 """
 
-@bot.message_handler(commands=['phone'])
+@bot.message_handler(commands=['setinfos'])
 def ask_phone_number(message):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button = types.KeyboardButton(text="Partager mon numéro de téléphone", request_contact=True)
@@ -327,8 +327,20 @@ def ask_phone_number(message):
 # Traitement de la réponse au numéro de téléphone
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
+    print(f"{message.chat.id}: Set user infos")
     phone_number = message.contact.phone_number
-    bot.reply_to(message, f"Merci d'avoir partagé votre numéro de téléphone : {phone_number}")
+    first_name = message.from_user.first_name
+    last_name = message.from_user.last_name
+
+    user_data = {"full_name": f"{last_name} {first_name}", "contact": str(phone_number)}
+
+    status, _ = validate_user_infos(user_data, message.chat.id)
+
+    if status == 200:
+        print(f"{message.chat.id}: User infos successfully share")
+        bot.send_message(message.chat.id, f"Merci d'avoir partagé votre numéro de téléphone : {phone_number}")
+    else:
+        bot.send_message(message.chat.id, "Veuillez réessayez s'il vous plait !")
 
 
 @bot.message_handler(commands=["cancel"])
